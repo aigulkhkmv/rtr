@@ -255,32 +255,30 @@ class LemonTree():
             return True
 
 
-def search(node_number):  # traverse the tree
-    max_depth = 10
-
-    if len(G.nodes) == 1:  # or we have IndexError for root
-        new_node_number = expansion(node_number)
-
-    elif len(G.nodes) != 1:
-        new_node_number = LemonTree.go_to_best_or_random_child(1)
-
-    if LemonTree.number_of_visits(new_node_number) > 1 and G.nodes[new_node_number]["terminal"] == False:
-        search(new_node_number)
-    elif G.nodes[new_node_number]["terminal"] == True:
-        node_attrs = {node_number: {"reward": G.nodes[node_number]["reward"] + (-1)}}
-        nx.set_node_attributes(G, node_attrs)
-        update(new_node_number)
+def search(node_number, random = False): #traverse the tree
+    if len(G.nodes) == 1:        # or we have IndexError for root
+         return node_number
+    if random == False:
+        new_node_number = LemonTree.go_to_best_or_random_child(1)    #MUST BE NODE NUMBER, NOT 1
     else:
-        expansion(new_node_number)
+        new_node_number = LemonTree.go_to_random_child(1)
 
-    if solution_found_counter > 0:
-        return_solutions(new_node_number)
+    if G.nodes[new_node_number]["expansion"] == True and G.nodes[new_node_number]["terminal"] == False:
+        search(new_node_number, random)
+    elif G.nodes[new_node_number]["expansion"] == False:
+        return new_node_number
+    elif G.nodes[new_node_number]["terminal"] == True:
+        search(1, random = True)
 
-    elif LemonTree.node_depth(new_node_number) > max_depth:
-        sys.exit(0)
 
-    elif solution_found_counter == 1:
-        search(1)
+def MCTsearch(Max_Iteration=100, Max_Num_Solved=2):
+    max_depth = 10
+    for i in range(Max_Iteration):
+        while solution_found_counter < Max_Num_Solved:
+            node_number = 1
+            new_node_number = search(node_number)
+            if LemonTree.node_depth(new_node_number) < max_depth:
+                expansion(new_node_number)
 
 
 synthetic_path = []
@@ -332,47 +330,59 @@ def expansion(node_number, rollout=False):
     if rollout == True:
         new_patterns = return_patterns_rollout(prediction(prep_mol_for_nn(mol_container)))
     else:
+        nx.set_node_attributes(G, {node_number: {"expansion": True}})
         new_patterns = return_patterns_expansion(prediction(prep_mol_for_nn(mol_container)))
-        if LemonTree.go_to_child(node_number) != 0:  # чтобы не было две ноды из-за roll-out
+        ######check if node already exist (created in rollout)
+        if LemonTree.go_to_child(
+                node_number) != 0 and LemonTree.is_terminal != True:  # чтобы не было две ноды из-за roll-out
             new_patterns.pop(list(new_patterns.keys())[0], None)
+
     if len(new_patterns) == 0:
         G.nodes[node_number]["terminal"] = True
+        update(node_number, -1)
+
     if G.nodes[node_number]["terminal"] != True:
         new_mols_from_pred = create_mol_from_pattern(new_patterns, mol_container)
         if len(new_mols_from_pred[0]) == 0:
-            node_attrs_11 = {node_number: {"terminal": True}}
-            nx.set_node_attributes(G, node_attrs_11)
+            nx.set_node_attributes(G, {node_number: {"terminal": True}})
             update(node_number, -1)
-            search(node_number)
-        new_hash_from_pred = create_hash_from_pred_mols(new_mols_from_pred)
-        save_to_shelve(prediction=new_mols_from_pred, prediction_hash=new_hash_from_pred)
+        else:
+            new_hash_from_pred = create_hash_from_pred_mols(new_mols_from_pred)
+            save_to_shelve(prediction=new_mols_from_pred, prediction_hash=new_hash_from_pred)
 
-        for j2 in range(len(new_hash_from_pred[0])):
-            copy_of_list_of_molecular_hash = list_of_molecular_hash
-            for j3 in new_hash_from_pred[0][j2]:
-                sigma_aldrich_db = shelve.open("/home/aigul/Retro/test_db/sigma_aldrich_db.txt")
-                try:
-                    sigma_aldrich_db[j3]
-                except:
-                    copy_of_list_of_molecular_hash.append(j3)
-                sigma_aldrich_db.close()
-            new_node_number = LemonTree.add_node(molecule_hash=copy_of_list_of_molecular_hash,
-                                                 parent_node_number=node_number, probability=new_hash_from_pred[2][j2])
-            LemonTree.add_edge(parent_node_number=node_number, node_number=new_node_number,
-                               reaction_hash=new_hash_from_pred[1][j2])
+            for j2 in range(len(new_hash_from_pred[0])):
+                copy_of_list_of_molecular_hash = list_of_molecular_hash
+                # check compounds in DB and if yes exclude it from node molecule list
+                for j3 in new_hash_from_pred[0][j2]:
+                    sigma_aldrich_db = shelve.open("/home/aigul/Retro/test_db/sigma_aldrich_db.txt")
+                    try:
+                        sigma_aldrich_db[j3]
+                    except:
+                        copy_of_list_of_molecular_hash.append(j3)
+                    sigma_aldrich_db.close()
 
-            if LemonTree.node_depth(new_node_number) > max_depth and LemonTree.node_solved(new_node_number) == False:
-                update(new_node_number, -1)
-                # go to new pattern
-            elif len(G.nodes[new_node_number]["list_of_molecule_hash"]) == 0:
-                node_attrs_1 = {new_node_number: {"solved": True}}
-                nx.set_node_attributes(G, node_attrs_1)
-                solution_found_counter += 1
-                update(new_node_number, 1)
-                return new_node_number
-            else:
-                node_nums_rollout.append(new_node_number)
-                expansion(new_node_number, rollout=True)
+                    # check if node exist if Rollout = False? if not:
+
+                new_node_number = LemonTree.add_node(molecule_hash=copy_of_list_of_molecular_hash,
+                                                     parent_node_number=node_number,
+                                                     probability=new_hash_from_pred[2][j2])
+
+                LemonTree.add_edge(parent_node_number=node_number, node_number=new_node_number,
+                                   reaction_hash=new_hash_from_pred[1][j2])
+
+                if LemonTree.node_depth(new_node_number) > max_depth and LemonTree.node_solved(
+                        new_node_number) == False:
+                    update(new_node_number, -1)
+                elif len(G.nodes[new_node_number]["list_of_molecule_hash"]) == 0:
+                    node_attrs_1 = {new_node_number: {"solved": True, "expansion": True, "terminal": True}}
+                    nx.set_node_attributes(G, node_attrs_1)
+                    solution_found_counter += 1
+                    return_solutions(new_node_number)
+                    update(new_node_number, 1)
+
+                else:
+                    node_nums_rollout.append(new_node_number)
+                    expansion(new_node_number, rollout=True)
         # tut dolzhno bit pusto
 
 
@@ -393,4 +403,4 @@ attrs_1 = {
         "terminal": False}}
 nx.set_node_attributes(G, attrs_1)
 
-search(1)
+MCTsearch(1)
