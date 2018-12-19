@@ -3,6 +3,8 @@ from keras.models import model_from_json
 import pickle
 import os
 import json
+from tqdm import tqdm
+from tqdm import tnrange
 from copy import deepcopy
 import pandas
 import shelve
@@ -12,6 +14,7 @@ from CGRtools.files import RDFread, RDFwrite, SDFread
 from CGRtools.containers import ReactionContainer
 from CGRtools.preparer import CGRpreparer
 from CGRtools.reactor import CGRreactor
+import matplotlib.pyplot as plt
 
 path_to_keras_json_file = "/home/aigul/Retro/keras_models/80_200_325_1*2000/model_36_epochs.json"
 path_to_keras_h5_file = "/home/aigul/Retro/keras_models/80_200_325_1*2000/model_36_epochs.h5"
@@ -270,12 +273,9 @@ def expansion(node_number, rollout=False):
                 copy_of_list_of_molecules = deepcopy(list_of_molecules[1:])
                 # check compounds in DB and if yes exclude it from node molecule list
                 for j3 in new_mols_from_pred[0][j2]:
-                    sigma_aldrich_db = shelve.open("/home/aigul/Retro/test_db/sigma_aldrich_db.txt")
-                    try:
-                        sigma_aldrich_db[j3]
-                    except:
+                    
+                    if j3 not in reagents_in_store:
                         copy_of_list_of_molecules.append(j3)
-                    sigma_aldrich_db.close()
 
                 # check if node exist if Rollout = False? if not:
                 # in rollout == False we add new nodes, 1) if children of nodes absent
@@ -357,8 +357,7 @@ def random_search(s):
 def MCTsearch(Max_Iteration=100, Max_Num_Solved=2):
     max_depth = 10
 
-    for i in range(Max_Iteration):
-        print(i)
+    for i in tnrange(Max_Iteration):
         while solution_found_counter < Max_Num_Solved:
             node_number = 1
             new_node_number = search(node_number) or random_search(node_number)
