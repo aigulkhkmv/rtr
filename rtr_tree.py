@@ -356,12 +356,14 @@ def random_search(s):
 
 def MCTsearch(Max_Iteration=100, Max_Num_Solved=2):
     max_depth = 10
+
     for i in range(Max_Iteration):
+        print(i)
         while solution_found_counter < Max_Num_Solved:
             node_number = 1
             new_node_number = search(node_number) or random_search(node_number)
             if not new_node_number:
-                continue
+                break
             if LemonTree.node_depth(new_node_number) < max_depth:
                 expansion(new_node_number)
 
@@ -377,3 +379,4 @@ attrs_1 = {1: {"list_of_molecules": [target_molecule], "depth": 0, "solved": Fal
 nx.set_node_attributes(G, attrs_1)
 
 MCTsearch(Max_Iteration=100, Max_Num_Solved=2)
+
