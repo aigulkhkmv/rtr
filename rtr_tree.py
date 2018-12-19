@@ -34,13 +34,13 @@ reverse_dict = {}
 for i, j in old_new_nums_of_rules.items():
     reverse_dict[j] = i
 path_to_file_with_mol = "/home/aigul/Retro/second_test_for_tree.sdf"
-target=SDFread(path_to_file_with_mol).read()
+target = SDFread(path_to_file_with_mol).read()
 solution_found_counter = 0
 
 
 # create array descriptor from molecule
 def prep_mol_for_nn(mol_container):
-    descriptor =fr.transform([mol_container])
+    descriptor = fr.transform([mol_container])
     descriptor_array = descriptor.values
     return descriptor_array
 
@@ -178,22 +178,31 @@ class LemonTree():
             except:
                 break
         if random_number < E:
-            return list_of_children[random.randint(0, len(list_of_children) - 1)]
+            if len(list_of_children) == 0:
+                return None
+            else:
+                return list_of_children[random.randint(0, len(list_of_children) - 1)]
         if random_number > E:
             best_num = 0
-            for num in range(len(list_of_children)):
-                if num + 1 < len(list_of_children):
-                    if G.nodes[list_of_children[num]]['a'] < G.nodes[list_of_children[num + 1]]['a']:
-                        best_num = num
-                else:
-                    best_num = 0
-            return list_of_children[best_num]
+            if len(list_of_children) != 1:
+                for num in range(len(list_of_children)):
+                    if num + 1 < len(list_of_children):
+                        if G.nodes[list_of_children[num]]['a'] < G.nodes[list_of_children[num + 1]]['a']:
+                            best_num = num + 1
+            else:
+                best_num = 0
 
-    def go_to_random_child(root_number):
-        print("I here")
-        list_of_children = LemonTree.go_to_child(root_number)
-        print(list_of_children)
-        return list_of_children[random.randint(0, len(list_of_children) - 1)]
+            if len(list_of_children) == 0:
+                return None
+            else:
+                return list_of_children[best_num]
+
+    def go_to_random_child(node_number):
+        list_of_children = LemonTree.go_to_child(node_number)
+        if len(list_of_children) == 0:
+            return None
+        else:
+            return list_of_children[random.randint(0, len(list_of_children) - 1)]
 
     def is_terminal(parent_node_number):
         y = G.successors(parent_node_number)
@@ -202,7 +211,9 @@ class LemonTree():
         except:
             return True
 
+
 synthetic_path = []
+
 
 def return_solutions(new_node_number):
     with RDFwrite("/home/aigul/Retro/templates/first_predictions.rdf") as f:
@@ -219,14 +230,14 @@ def return_solutions(new_node_number):
 
 def update(new_node_number, reward):
     node_attrs_2 = {new_node_number: {"number_of_visits": G.nodes[new_node_number]["number_of_visits"] + 1,
-                                  "reward": G.nodes[new_node_number]["reward"]+(reward)}}
+                                      "reward": G.nodes[new_node_number]["reward"] + (reward)}}
     nx.set_node_attributes(G, node_attrs_2)
-    Q = (1/(G.nodes[new_node_number]["number_of_visits"]))*(G.nodes[new_node_number]["reward"])
-    P = G.nodes[new_node_number]["probability"]               #prob from NN
+    Q = (1 / (G.nodes[new_node_number]["number_of_visits"])) * (G.nodes[new_node_number]["reward"])
+    P = G.nodes[new_node_number]["probability"]  # prob from NN
     parent_node = LemonTree.go_to_parent(new_node_number)
     N = G.nodes[new_node_number]["number_of_visits"]
     N_pred = G.nodes[parent_node]["number_of_visits"]
-    a = (Q) + P*(math.sqrt(N_pred)/(1+N))
+    a = (Q) + P * (math.sqrt(N_pred) / (1 + N))
     node_attrs_3 = {new_node_number: {"Q": Q, "a": a}}
     nx.set_node_attributes(G, node_attrs_3)
     if parent_node != 1:
@@ -305,7 +316,8 @@ def expansion(node_number, rollout=False):
                     else:
                         expansion(node_number)
 
-                if LemonTree.node_depth(new_node_number) > max_depth and LemonTree.node_solved(new_node_number) is False:
+                if LemonTree.node_depth(new_node_number) > max_depth and LemonTree.node_solved(
+                        new_node_number) is False:
                     update(new_node_number, -1)
                 elif len(G.nodes[new_node_number]["list_of_molecules"]) == 0:
                     node_attrs_1 = {new_node_number: {"solved": True, "expanded": True, "terminal": True}}
@@ -316,27 +328,30 @@ def expansion(node_number, rollout=False):
                 else:
                     node_nums_rollout.append(new_node_number)
                     expansion(new_node_number, rollout=True)
+                    # tut dolzhno bit pusto
 
 
-def search(node_number, random=False):  # traverse the tree
-    if len(G.nodes) == 1:  # or we have IndexError for root
-        return node_number
-    if random is False:
-        new_node_number_ = LemonTree.go_to_best_or_random_child(node_number)
-        if G.nodes[node_number]["expanded"] is True and G.nodes[new_node_number_]["expanded"] is False:
-            new_node_number = new_node_number_
-        else:
-            return search(new_node_number_, False)
-    else:
-        new_node_number = LemonTree.go_to_random_child(1)
-    if G.nodes[new_node_number]["expanded"] and not G.nodes[new_node_number]["terminal"]:
-        print("search")
-        search(new_node_number, random)
-    elif not G.nodes[new_node_number]["expanded"] and not G.nodes[new_node_number]["terminal"]:
-        return new_node_number
-    elif G.nodes[new_node_number]["terminal"]:
-        print("Let's start random")
-        search(1, random=True)
+def expanded_nodes_in_tree():
+    for node in G.nodes:
+        if not G.nodes[node]["expanded"] and G.nodes[node]["terminal"]:
+            return True
+
+
+def search(s):
+    if len(G.nodes) == 1:
+        return s
+    while LemonTree.go_to_best_or_random_child(s):
+        s = LemonTree.go_to_best_or_random_child(s)
+        if not G.nodes[s]["expanded"]:
+            return s
+
+
+def random_search(s):
+    if expanded_nodes_in_tree():
+        while LemonTree.go_to_random_child(s):
+            s = LemonTree.go_to_random_child(s)
+            if not G.nodes[s]["expanded"]:
+                return s
 
 
 def MCTsearch(Max_Iteration=100, Max_Num_Solved=2):
@@ -344,7 +359,9 @@ def MCTsearch(Max_Iteration=100, Max_Num_Solved=2):
     for i in range(Max_Iteration):
         while solution_found_counter < Max_Num_Solved:
             node_number = 1
-            new_node_number = search(node_number)
+            new_node_number = search(node_number) or random_search(node_number)
+            if not new_node_number:
+                continue
             if LemonTree.node_depth(new_node_number) < max_depth:
                 expansion(new_node_number)
 
@@ -356,7 +373,7 @@ tar = target[0]
 target_molecule = tar
 G.add_node(1)
 attrs_1 = {1: {"list_of_molecules": [target_molecule], "depth": 0, "solved": False, "reward": 0, "number_of_visits": 0,
-             "terminal": False}}
+               "terminal": False}}
 nx.set_node_attributes(G, attrs_1)
 
 MCTsearch(Max_Iteration=100, Max_Num_Solved=2)
