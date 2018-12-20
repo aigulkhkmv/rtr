@@ -120,7 +120,6 @@ def create_mol_from_pattern(pattern_nums_in_file, molecule):
             except:
                 return ([], [], [])
 
-# take ONE molecule, hash
 class LemonTree():
     def add_node_(parent_node_number, list_of_molecules, probability):
         unique_number = len(G.nodes) + 1
@@ -232,7 +231,7 @@ def update(new_node_number, reward):
                                       "reward": G.nodes[new_node_number]["reward"] + (reward)}}
     nx.set_node_attributes(G, node_attrs_2)
     Q = (1 / (G.nodes[new_node_number]["number_of_visits"])) * (G.nodes[new_node_number]["reward"])
-    P = G.nodes[new_node_number]["probability"]  # prob from NN
+    P = G.nodes[new_node_number]["probability"] 
     parent_node = LemonTree.go_to_parent(new_node_number)
     N = G.nodes[new_node_number]["number_of_visits"]
     N_pred = G.nodes[parent_node]["number_of_visits"]
@@ -269,10 +268,7 @@ def expansion(node_number, rollout=False):
                 copy_of_list_of_molecules = deepcopy(list_of_molecules[1:])
                 # check compounds in DB and if yes exclude it from node molecule list
                 for j3 in new_mols_from_pred[0][j2]:
-                    print(j3)
-                    print(j3.get_signature_hash())
                     if j3.get_signature_hash() not in reagents_in_store:
-                        print(":C")
                         copy_of_list_of_molecules.append(j3)
 
                 # check if node exist if Rollout = False? if not:
@@ -326,7 +322,6 @@ def expansion(node_number, rollout=False):
                 else:
                     node_nums_rollout.append(new_node_number)
                     expansion(new_node_number, rollout=True)
-                    # tut dolzhno bit pusto
 
 
 def expanded_nodes_in_tree():
