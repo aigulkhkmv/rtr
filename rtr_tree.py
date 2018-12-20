@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 path_to_keras_json_file = "/home/aigul/Retro/keras_models/80_200_325_1*2000/model_36_epochs.json"
 path_to_keras_h5_file = "/home/aigul/Retro/keras_models/80_200_325_1*2000/model_36_epochs.h5"
 path_to_fragmentor = "/home/aigul/Retro/finalize_descriptors.pickle"
+# path_to_file_with_mol = "/home/aigul/Retro/mol_for_testing_tree.sdf"
 path_to_file_with_mol = "/home/aigul/Retro/mol_for_testing_tree.sdf"
 json_file = open(path_to_keras_json_file, 'r')  # load json and create model
 loaded_model_json = json_file.read()
@@ -36,10 +37,11 @@ with open("/home/aigul/Retro/OldNewNumsOfRules.json") as json_file:
 reverse_dict = {}
 for i, j in old_new_nums_of_rules.items():
     reverse_dict[j] = i
-path_to_file_with_mol = "/home/aigul/Retro/second_test_for_tree.sdf"
-target = SDFread(path_to_file_with_mol).read()
-solution_found_counter = 0
+with open("/home/aigul/Retro/reagents/reagents_hash_3mols.pickle", "rb") as f7:
+    reagents_in_store = pickle.load(f7)
+reagents_in_store = set(reagents_in_store)
 
+target = SDFread(path_to_file_with_mol).read()
 
 # create array descriptor from molecule
 def prep_mol_for_nn(mol_container):
@@ -117,7 +119,6 @@ def create_mol_from_pattern(pattern_nums_in_file, molecule):
                     return destroy_all, created_reactions, prob_end
             except:
                 return ([], [], [])
-
 
 # take ONE molecule, hash
 class LemonTree():
@@ -214,10 +215,6 @@ class LemonTree():
         except:
             return True
 
-
-synthetic_path = []
-
-
 def return_solutions(new_node_number):
     with RDFwrite("/home/aigul/Retro/templates/first_predictions.rdf") as f:
         global synthetic_path
@@ -226,8 +223,7 @@ def return_solutions(new_node_number):
             synthetic_path.append(nx.get_edge_attributes(G, 'reaction')[parent_node_number, new_node_number])
             return_solutions(parent_node_number)
         for solution in synthetic_path:
-            f.write(rea_container)
-        return synthetic_path
+            f.write(solution)
         synthetic_path = []
 
 
@@ -273,8 +269,10 @@ def expansion(node_number, rollout=False):
                 copy_of_list_of_molecules = deepcopy(list_of_molecules[1:])
                 # check compounds in DB and if yes exclude it from node molecule list
                 for j3 in new_mols_from_pred[0][j2]:
-                    
-                    if j3 not in reagents_in_store:
+                    print(j3)
+                    print(j3.get_signature_hash())
+                    if j3.get_signature_hash() not in reagents_in_store:
+                        print(":C")
                         copy_of_list_of_molecules.append(j3)
 
                 # check if node exist if Rollout = False? if not:
@@ -366,7 +364,8 @@ def MCTsearch(Max_Iteration=100, Max_Num_Solved=2):
             if LemonTree.node_depth(new_node_number) < max_depth:
                 expansion(new_node_number)
 
-
+synthetic_path = []
+solution_found_counter = 0
 node_nums_rollout = []
 G = nx.DiGraph()
 # add target molecule at graph
