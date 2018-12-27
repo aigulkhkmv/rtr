@@ -3,19 +3,25 @@ import networkx as nx
 from CGRtools.files import SDFread
 import random
 
+from networkx import DiGraph
+import networkx as nx
+from CGRtools.files import SDFread
+import random
+
 class LemonTree(DiGraph):
     def __init__(self, target):
         super().__init__()
-        self.add_node(1, terminal=False, reagents=[target])
+        self.add_node(1, reagents=[target], depth=0, solved=False, reward=0, 
+                      number_of_visits=0, terminal=False, expanded = False )
 
-    def add_node_with_attrs(self, parent_node_number, list_of_molecules, probability):
+    def add_node_with_attrs(self, parent_node_number, list_reagents, probability):
         unique_number = len(self.nodes) + 1
         children_depth = int(self.nodes[parent_node_number]['depth']) + 1
         visiting = 0
         solved_ = False
         self.add_node(unique_number)
         nx.set_node_attributes(self, {
-            unique_number: {"list_of_molecules": list_of_molecules, "depth": children_depth, "solved": solved_,
+            unique_number: {"reagents": list_of_reagents, "depth": children_depth, "solved": solved_,
                             "reward": 0, "number_of_visits": visiting, "terminal": False, "Q": 0,
                             "probability": probability, "a": 0, "expanded": False}})
         return unique_number
