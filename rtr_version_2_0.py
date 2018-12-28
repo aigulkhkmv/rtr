@@ -302,14 +302,6 @@ def expansion(node_number, rollout=False):
                 # and 2) if list of hashes != list of new list of hashes; if we have one prediction and this prediction in node we continue
                 if rollout is False:
                     if lemon_tree.go_to_child(node_number) == []:
-
-
-
-
-
-
-
-
                         new_node_number = lemon_tree.add_node_with_attrs(list_of_reagents=copy_of_list_of_molecules,
                                                               parent_node_number=node_number,
                                                               probability=new_mols_from_pred[2][j2])
@@ -399,3 +391,4 @@ node_nums_rollout = []
 
 
 MCTsearch(Max_Iteration=100, Max_Num_Solved=2)
+
