@@ -11,6 +11,7 @@ from CGRtools.files import RDFread, RDFwrite, SDFread
 from CGRtools.containers import ReactionContainer
 from CGRtools.preparer import CGRpreparer
 from CGRtools.reactor import CGRreactor
+from CIMtools.preprocessing import StandardizeChemAxon
 from networkx import DiGraph
 
 path_to_keras_json_file = "/home/aigul/Retro/keras_models/80_200_325_1*2000/model_36_epochs.json"
@@ -22,7 +23,7 @@ loaded_model_json = json_file.read()
 json_file.close()
 keras_model = model_from_json(loaded_model_json)
 keras_model.load_weights(path_to_keras_h5_file)  # load weights into new model
-os.environ["PATH"] = "/opt/fragmentor"
+os.environ["PATH"] += ":/opt/fragmentor"
 with open(path_to_fragmentor, "rb") as f:
     fr = pickle.load(f)
 target = SDFread(path_to_file_with_mol).read()
@@ -35,9 +36,12 @@ for i, j in old_new_nums_of_rules.items():
     reverse_dict[j] = i
 with open("/home/aigul/Retro/reagents/reagents_hashes_stand_version.pickle", "rb") as f7:
     reagents_in_store = pickle.load(f7)
-reagents_in_store = set(reagents_in_store)
+with open("/home/aigul/Retro/stand/stand.xml", "r") as stand_file:
+    std = stand_file.read()
+standardizer = StandardizeChemAxon(std)
 
-target = SDFread(path_to_file_with_mol).read()[0]
+reagents_in_store = set(reagents_in_store)
+target = standardizer.transform(SDFread(path_to_file_with_mol).read()).as_matrix()[0]
 
 
 # create array descriptor from molecule
@@ -108,9 +112,8 @@ def create_mol_from_pattern(pattern_nums_in_file, molecule):
             for i in searcher(molecule):
                 destroy = react.patcher(structure=molecule, patch=i.patch)
             try:
-                destroy_all.append(CGRpreparer.split(destroy))
+                destroy_all.append(standardizer.transform(CGRpreparer.split(destroy)).as_matrix())
                 prob_end.append(cgr_prob[cgr_nums])
-
                 for j in range(len(destroy_all)):
                     created_reactions.append(ReactionContainer(reagents=destroy_all[j], products=[molecule]))
                     return destroy_all, created_reactions, prob_end
@@ -391,5 +394,4 @@ solution_found_counter = 0
 node_nums_rollout = []
 
 MCTsearch(Max_Iteration=100, Max_Num_Solved=2)
-
 
