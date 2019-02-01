@@ -41,11 +41,13 @@ with open("/home/aigul/Retro/stand/stand.xml", "r") as stand_file:
 standardizer = StandardizeChemAxon(std)
 
 reagents_in_store = set(reagents_in_store)
+
 target = standardizer.transform(SDFread(path_to_file_with_mol).read()).as_matrix()[0]
 
 
 # create array descriptor from molecule
 def prep_mol_for_nn(mol_container):
+
     descriptor = fr.transform([mol_container])
     descriptor_array = descriptor.values
     return descriptor_array
@@ -107,7 +109,8 @@ def create_mol_from_pattern(pattern_nums_in_file, molecule):
             react = CGRreactor()
             with RDFwrite("/home/aigul/Retro/templates/test" + str(len(lemon_tree.nodes)) + ".template") as f:
                 f.write(ReactionContainer(reagents=[prod_from_cgr[0]], products=reag_from_cgr))
-            with RDFread("/home/aigul/Retro/templates/test" + str(len(lemon_tree.nodes)) + ".template", is_template=True) as f:
+            with RDFread("/home/aigul/Retro/templates/test" + str(len(lemon_tree.nodes)) + ".template",
+                         is_template=True) as f:
                 template = react.prepare_templates(f.read())
             searcher = react.get_template_searcher(templates=template)
             for i in searcher(molecule):
@@ -122,12 +125,13 @@ def create_mol_from_pattern(pattern_nums_in_file, molecule):
                 reagents_reactions_probs.append([[], [], []])
     return reagents_reactions_probs
 
+
 # take ONE molecule, hash
 class LemonTree(DiGraph):
     def __init__(self, target):
         super().__init__()
         self.add_node(1, reagents=[target], depth=0, solved=False, reward=0,
-                      number_of_visits=0, terminal=False, expanded = False )
+                      number_of_visits=0, terminal=False, expanded=False)
 
     def add_node_(self, parent_node_number, list_of_reagents, probability):
         unique_number = len(self.nodes) + 1
@@ -149,15 +153,12 @@ class LemonTree(DiGraph):
         edge_attrs = {(parent_node_number, node_number): {'reaction': reaction}}
         nx.set_edge_attributes(self, edge_attrs)
 
-
     def return_reaction(self, parent_node_number, new_node_number):
         return nx.get_edge_attributes(lemon_tree, "reaction")[parent_node_number, new_node_number]
-
 
     def node_depth(self, node_number):
         node_depth_ = self.nodes[node_number]['depth']
         return node_depth_
-
 
     @property
     def number_of_visits(self):
@@ -167,7 +168,6 @@ class LemonTree(DiGraph):
     def node_solved(self):
         return self.nodes(data="solved")
 
-
     def go_to_parent(self, node_number):
         try:
             parent = self._pred[node_number]
@@ -175,15 +175,12 @@ class LemonTree(DiGraph):
         except:
             return node_number
 
-
     def add_edge_(self, parent_node_number, node_number, reaction):
         self.add_edge(parent_node_number, node_number)
         self.change_atrrs_of_edge(parent_node_number=parent_node_number, node_number=node_number, reaction=reaction)
 
-
     def go_to_node(self, node_number):
         return self.nodes[node_number]
-
 
     def go_to_child(self, parent_node_number):
         y = self.successors(parent_node_number)
@@ -194,7 +191,6 @@ class LemonTree(DiGraph):
             except:
                 break
         return list_of_children
-
 
     def go_to_best_or_random_child(self, expanded_node_number):
         E = 0.2
@@ -226,7 +222,6 @@ class LemonTree(DiGraph):
             else:
                 return list_of_children[best_num]
 
-
     def go_to_random_child(self, node_number):
         list_of_children = self.go_to_child(node_number)
         if len(list_of_children) == 0:
@@ -241,6 +236,7 @@ class LemonTree(DiGraph):
         except:
             return True
 
+
 lemon_tree = LemonTree(target)
 
 
@@ -249,7 +245,8 @@ def return_solutions(new_node_number):
         global synthetic_path
         parent_node_number = lemon_tree.go_to_parent(new_node_number)
         if new_node_number != parent_node_number:
-            synthetic_path.append(lemon_tree.return_reaction(parent_node_number=parent_node_number, new_node_number=new_node_number))
+            synthetic_path.append(
+                lemon_tree.return_reaction(parent_node_number=parent_node_number, new_node_number=new_node_number))
             return_solutions(parent_node_number)
         for solution in synthetic_path:
             f.write(solution)
@@ -259,7 +256,7 @@ def return_solutions(new_node_number):
 
 def update(new_node_number, reward):
     node_attrs_2 = {"number_of_visits": lemon_tree.nodes[new_node_number]["number_of_visits"] + 1,
-                                      "reward": lemon_tree.nodes[new_node_number]["reward"] + (reward)}
+                    "reward": lemon_tree.nodes[new_node_number]["reward"] + (reward)}
     lemon_tree.change_atrrs_of_node(node_number=new_node_number, dict_with_attrs=node_attrs_2)
     Q = (1 / (lemon_tree.nodes[new_node_number]["number_of_visits"])) * (lemon_tree.nodes[new_node_number]["reward"])
     P = lemon_tree.nodes[new_node_number]["probability"]  # prob from NN
@@ -279,20 +276,16 @@ def expansion(node_number):
     current_node = lemon_tree.go_to_node(node_number)
     list_of_reagents = current_node["reagents"]
     mol_container = list_of_reagents[0]
-    lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs= {"expanded": True})
+    lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs={"expanded": True})
     new_patterns = return_patterns_expansion(prediction(prep_mol_for_nn(mol_container)))
-
     if len(new_patterns) == 0:
         lemon_tree.nodes[node_number]["terminal"] = True
         update(node_number, -1)
-
     if lemon_tree.nodes[node_number]["terminal"] != True:
         new_mols_from_pred = create_mol_from_pattern(new_patterns, mol_container)
-
         for new_mol in new_mols_from_pred:
-
             if len(new_mol[0]) == 0:
-                lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs= {"terminal": True} )
+                lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs={"terminal": True})
                 update(node_number, -1)
             else:
                 for j2 in range(len(new_mol[0])):
@@ -308,11 +301,11 @@ def expansion(node_number):
 
                     if lemon_tree.go_to_child(node_number) == []:
                         new_node_number = lemon_tree.add_node_(list_of_reagents=copy_of_list_of_reagents,
-                                                              parent_node_number=node_number,
-                                                              probability=new_mol[2][j2])
+                                                               parent_node_number=node_number,
+                                                               probability=new_mol[2][j2])
 
                         lemon_tree.add_edge_(parent_node_number=node_number, node_number=new_node_number,
-                                           reaction=new_mol[1][j2])
+                                             reaction=new_mol[1][j2])
                     else:
                         repeated = False
                         for child_num in range(len(lemon_tree.go_to_child(node_number))):
@@ -321,19 +314,21 @@ def expansion(node_number):
                                 repeated = True
                         if repeated == False:
                             new_node_number = lemon_tree.add_node_(list_of_reagents=copy_of_list_of_reagents,
-                                                                  parent_node_number=node_number,
-                                                                  probability=new_mol[2][j2])
+                                                                   parent_node_number=node_number,
+                                                                   probability=new_mol[2][j2])
                             lemon_tree.add_edge_(parent_node_number=node_number, node_number=new_node_number,
-                                               reaction=new_mol[1][j2])
+                                                 reaction=new_mol[1][j2])
                         else:
                             lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs={"expanded": True})
-
+                            return lemon_tree.go_to_child(node_number)
 
                     if lemon_tree.node_depth(new_node_number) > max_depth and lemon_tree.node_solved(
                             new_node_number) is False:
                         update(new_node_number, -1)
                     elif len(lemon_tree.nodes[new_node_number]["reagents"]) == 0:
-                        lemon_tree.change_atrrs_of_node(node_number=new_node_number, dict_with_attrs= {"solved": True, "expanded": True, "terminal": True} )
+                        lemon_tree.change_atrrs_of_node(node_number=new_node_number,
+                                                        dict_with_attrs={"solved": True, "expanded": True,
+                                                                         "terminal": True})
                         solution_found_counter += 1
                         return_solutions(new_node_number)
                         update(new_node_number, 1)
@@ -354,7 +349,7 @@ def rollout(node_number):
         new_mols_from_pred = create_mol_from_pattern(new_patterns, mol_container)
         for new_mol in new_mols_from_pred:
             if len(new_mol[0]) == 0:
-                lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs= {"terminal": True} )
+                lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs={"terminal": True})
                 update(node_number, -1)
             else:
                 for j2 in range(len(new_mol[0])):
@@ -368,18 +363,20 @@ def rollout(node_number):
                     # and 2) if list of hashes != list of new list of hashes; if we have one prediction and this prediction in node we continue
                     if lemon_tree.go_to_child(node_number) == []:
                         new_node_number = lemon_tree.add_node_(list_of_reagents=copy_of_list_of_reagents,
-                                                              parent_node_number=node_number,
-                                                              probability=new_mol[2][j2])
+                                                               parent_node_number=node_number,
+                                                               probability=new_mol[2][j2])
 
                         lemon_tree.add_edge_(parent_node_number=node_number, node_number=new_node_number,
-                                           reaction=new_mol[1][j2])
+                                             reaction=new_mol[1][j2])
                     else:
                         break
                     if lemon_tree.node_depth(new_node_number) > max_depth and lemon_tree.node_solved(
                             new_node_number) is False:
                         update(new_node_number, -1)
                     elif len(lemon_tree.nodes[new_node_number]["reagents"]) == 0:
-                        lemon_tree.change_atrrs_of_node(node_number=new_node_number, dict_with_attrs= {"solved": True, "expanded": True, "terminal": True} )
+                        lemon_tree.change_atrrs_of_node(node_number=new_node_number,
+                                                        dict_with_attrs={"solved": True, "expanded": True,
+                                                                         "terminal": True})
                         solution_found_counter += 1
                         return_solutions(new_node_number)
                         update(new_node_number, 1)
@@ -418,16 +415,19 @@ def MCTsearch(Max_Iteration, Max_Num_Solved):
             node_number = 1
             new_node_number = search(node_number) or random_search(node_number)
             if not new_node_number:
-                break
+                continue
             if lemon_tree.node_depth(new_node_number) < max_depth:
                 expanded_nodes_nums = expansion(new_node_number)
-                for expanded_node in expanded_nodes_nums:
-                    rollout(expanded_node)
+                if expanded_nodes_nums:
+                    for expanded_node in expanded_nodes_nums:
+                        rollout(expanded_node)
+                else:
+                    continue
 
 
 synthetic_path = []
 solution_found_counter = 0
 node_nums_rollout = []
 
-MCTsearch(Max_Iteration=3, Max_Num_Solved=2)
+MCTsearch(Max_Iteration=10, Max_Num_Solved=2)
 
