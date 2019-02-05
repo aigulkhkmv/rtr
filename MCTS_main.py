@@ -48,6 +48,9 @@ def expansion(node_number):
     max_depth = 10
     current_node = lemon_tree.go_to_node(node_number)
     list_of_reagents = current_node["reagents"]
+    if list_of_reagents == []:
+        lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs={"expanded": True})
+        return
     mol_container = list_of_reagents[0]
     lemon_tree.change_atrrs_of_node(node_number=node_number, dict_with_attrs={"expanded": True})
     new_patterns = return_patterns_expansion(prediction(prep_mol_for_nn(mol_container)))
@@ -119,6 +122,11 @@ def rollout(node_number):
     max_depth = 10
     current_node = lemon_tree.go_to_node(node_number)
     list_of_reagents = current_node["reagents"]
+
+    if list_of_reagents == []:
+        return
+
+
     mol_container = list_of_reagents[0]
     new_patterns = return_patterns_rollout(prediction(prep_mol_for_nn(mol_container)))
     if len(new_patterns) == 0:
@@ -140,6 +148,7 @@ def rollout(node_number):
                     # check if node exist if Rollout = False? if not:
                     # in rollout == False we add new nodes, 1) if children of nodes absent
                     # and 2) if list of hashes != list of new list of hashes; if we have one prediction and this prediction in node we continue
+
                     if lemon_tree.go_to_child(node_number) == []:
                         new_node_number = lemon_tree.add_node_(list_of_reagents=copy_of_list_of_reagents,
                                                                parent_node_number=node_number,
@@ -154,7 +163,7 @@ def rollout(node_number):
                         update(new_node_number, -1)
                     elif len(lemon_tree.nodes[new_node_number]["reagents"]) == 0:
                         lemon_tree.change_atrrs_of_node(node_number=new_node_number,
-                                                        dict_with_attrs={"solved": True, "expanded": True,
+                                                        dict_with_attrs={"solved": True,
                                                                          "terminal": True})
                         solution_found_counter += 1
                         return_solutions(new_node_number)
@@ -188,3 +197,4 @@ solution_found_counter = 0
 node_nums_rollout = []
 
 MCTsearch(Max_Iteration=100, Max_Num_Solved=2)
+

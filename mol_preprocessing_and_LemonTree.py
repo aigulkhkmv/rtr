@@ -13,7 +13,7 @@ from CIMtools.preprocessing import StandardizeChemAxon
 from networkx import DiGraph
 
 # load target molecule
-path_to_file_with_mol = "/home/aigul/Retro/second_test_for_tree.sdf"
+path_to_file_with_mol = "/home/aigul/Retro/reagents/target0.sdf"
 
 #load fragmentor
 path_to_fragmentor = "/home/aigul/Retro/finalize_descriptors.pickle"
@@ -22,7 +22,7 @@ with open(path_to_fragmentor, "rb") as f:
     fr = pickle.load(f)
 
 # load reagents in store
-with open("/home/aigul/Retro/reagents/reagents_hashes_stand_version.pickle", "rb") as f7:
+with open("/home/aigul/Retro/reagents/special_base.pickle", "rb") as f7:
     reagents_in_store = pickle.load(f7)
 reagents_in_store = set(reagents_in_store)
 
@@ -327,7 +327,8 @@ class LemonTree(DiGraph):
             return node
         while self.go_to_best_or_random_child(node):
             node = self.go_to_best_or_random_child(node)
-            if not self.nodes[node]["expanded"]:
+            if not self.nodes[node]["expanded"] and not self.nodes[node]["terminal"]:
+                print(node, "NODE", self.nodes[node]["expanded"])
                 return node
 
     def random_search(self, node):
@@ -343,3 +344,4 @@ class LemonTree(DiGraph):
 
 target = standardizer.transform(SDFread(path_to_file_with_mol).read()).as_matrix()[0]
 lemon_tree = LemonTree(target)
+
