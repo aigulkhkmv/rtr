@@ -19,3 +19,4 @@ with open("../../Desktop/CGR.sdf") as f:
             print(n)
 with open('transformations_pycharm.pickle', 'wb') as f:
     pickle.dump(trans, f)
+
