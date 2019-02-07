@@ -113,12 +113,6 @@ def return_patterns_expansion(prediction_for_mol):
 
 
 def create_mol_from_pattern(pattern_nums_in_file, molecule):
-    """
-    function creates reactants from pattern and target molecule
-    :param pattern_nums_in_file: int
-    :param molecule: Molecule Container
-    :return: list of lists with [generated reactants], [created reactions], [predicted probability]
-    """
     cgr_patterns = []
     cgr_prob = []
     prob_end = []
@@ -146,11 +140,12 @@ def create_mol_from_pattern(pattern_nums_in_file, molecule):
             for i in searcher(molecule):
                 destroy = react.patcher(structure=molecule, patch=i.patch)
             try:
-                destroy_all.append(standardizer.transform(CGRpreparer.split(destroy)).as_matrix())
+                destroy_all.append(CGRpreparer.split(destroy))
                 prob_end.append(cgr_prob[cgr_nums])
                 for j in range(len(destroy_all)):
                     created_reactions.append(ReactionContainer(reagents=destroy_all[j], products=[molecule]))
-                    reagents_reactions_probs.append([destroy_all, created_reactions, prob_end])
+                    created_reactions = standardizer.transform(created_reactions).as_matrix()
+                    reagents_reactions_probs.append([[created_reactions[0].reagents], created_reactions, prob_end])
             except:
                 reagents_reactions_probs.append([[], [], []])
     return reagents_reactions_probs
@@ -328,7 +323,6 @@ class LemonTree(DiGraph):
         while self.go_to_best_or_random_child(node):
             node = self.go_to_best_or_random_child(node)
             if not self.nodes[node]["expanded"] and not self.nodes[node]["terminal"]:
-                print(node, "NODE", self.nodes[node]["expanded"])
                 return node
 
     def random_search(self, node):
