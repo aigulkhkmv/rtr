@@ -17,6 +17,6 @@ with open("../../Desktop/CGR.sdf") as f:
             trans[int(num)].append(int(id_))
         if n % 10000000 == 0:
             print(n)
-with open('transformations_pycharm.pickle', 'wb') as f:
+with open("transformations_pycharm.pickle", "wb") as f:
     pickle.dump(trans, f)
 
