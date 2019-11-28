@@ -1,2 +1,3 @@
-# rtr
-Repository for predicting retrosynthetic analysis using the Monte-Carlo tree to search and neural networks.
+# Retrosynthetic analysis
+
+Repository for predicting retrosynthetic analysis using the Monte-Carlo tree search and neural networks.
